@@ -37,8 +37,8 @@ class DirListBox(QWidget):
         self.openFileBtn.setMinimumHeight(30)
         self.openFileBtn.clicked.connect(self.SelectFile)
 
-        self.setMinimumWidth(150)
-        self.setMaximumWidth(250)
+        self.setMinimumWidth(250)
+        #self.setMaximumWidth(250)
 
         hLay.addWidget(self.openDirBtn)
         
