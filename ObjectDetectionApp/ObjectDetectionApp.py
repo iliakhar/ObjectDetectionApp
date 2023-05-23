@@ -1,122 +1,105 @@
 from email.charset import QP
+import imp
 import math
+from re import A
 from tkinter.tix import DirList
 from PyQt5.QtCore import *
-from PyQt5.QtGui import (QFont, QFontDatabase, QPixmap)
+from PyQt5.QtGui import (QFont, QFontDatabase, QPixmap, QImage)
 from PyQt5.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QApplication, QLabel, QTabWidget, QListWidget, QFileDialog)
 from PyQt5 import QtCore
 from pathlib import Path
 import glob
 import sys
 
-class DirListBox(QWidget):
-    changeSignal = QtCore.pyqtSignal(str)
-    def __init__ (self, title):
-        super().__init__()
-        self.initUI(title)
+import torch
+from matplotlib import pyplot as plt
+import numpy as np
+import cv2
 
-    def initUI(self, title):
-
-        vLay = QVBoxLayout()
-        hLay = QHBoxLayout()
-        self.dirList = QListWidget()
-        self.titleLbl = QLabel(title)
-        self.openDirBtn = QPushButton('Open Dir')
-        self.openFileBtn = QPushButton('Open File')
-        fontBig = QFont('Arial', 12)
-        fontSmall = QFont('Arial', 11)
-
-        self.dirList.setFont(fontSmall)
-
-        self.titleLbl.setContentsMargins(5,0,0,0)
-        self.titleLbl.setFont(fontBig)
-
-        self.openDirBtn.setFont(fontBig)
-        self.openDirBtn.setMinimumHeight(30)
-        self.openDirBtn.clicked.connect(self.SelectFolder)
-
-        self.openFileBtn.setFont(fontBig)
-        self.openFileBtn.setMinimumHeight(30)
-        self.openFileBtn.clicked.connect(self.SelectFile)
-
-        self.setMinimumWidth(150)
-        self.setMaximumWidth(250)
-
-        hLay.addWidget(self.openDirBtn)
-        hLay.addWidget(self.openFileBtn)
-
-        self.dirList.currentItemChanged.connect(self.ChangeElem)
-
-        vLay.addWidget(self.titleLbl)
-        vLay.addWidget(self.dirList)
-        vLay.addLayout(hLay)
-
-        self.setLayout(vLay)
-
-    @QtCore.pyqtSlot()
-    def ChangeElem(self):
-        self.changeSignal.emit(self.dirList.currentItem().text())
-
-    def SelectFile(self):
-        filenames, _ = QFileDialog.getOpenFileNames(
-            self,
-            "Select Files",
-            "C:\\",
-            "Images (*.png *.jpg)"
-            )
-        if filenames:
-            self.dirList.clear()
-            self.dirList.addItems([str(Path(filename)) for filename in filenames])
-        
-    def SelectFolder(self):
-        types = ('*.png', '*.jpg', '*.jpeg', '*.mp4')
-        dir_name = QFileDialog.getExistingDirectory(self, "Select a Directory","C:\\")
-        if dir_name:
-            self.dirList.clear()
-            path = Path(dir_name)
-            lst = []
-            for tp in types:
-                filenames = glob.glob(str(path) + "\\" + tp)
-                if filenames:
-                    self.dirList.addItems([str(Path(filename)) for filename in filenames])
+from DirListBox import DirListBox
             
 
 
+class DetectObject():
+    def __init__ (self, modelPath):
+        self.SetModel(modelPath)
 
+    def SetModel(self, modelPath):
+        self.model = torch.hub.load('ultralytics/yolov5', 'custom', modelPath, force_reload=True)
+
+    def GetDetectPic(self, picPath):
+            res = self.model(picPath)
+            pic = np.squeeze(res.render())
+            plt.imsave('Detectpic.png', pic)
 
 
 class MainWindow(QWidget):
     def __init__(self):
+        self.detect = DetectObject('../../yolov5/runs/train/exp18/weights/last.pt')
+        self.currentFile = ""
         QWidget.__init__(self)
         self.InitUi()
 
     def InitUi(self):
         
-        self.maxPicSize = 400
+
+        vLay = QVBoxLayout()
         hLay = QHBoxLayout()
         self.filesListWidget = DirListBox('Files list')
 
         self.setLayout(hLay)
         self.setMinimumSize(700,500)
 
+        fontBig = QFont('Arial', 12)
+        self.objDetectBtn = QPushButton("Detect")
+        self.objDetectBtn.setFont(fontBig)
+        self.objDetectBtn.setMinimumHeight(35)
+        self.objDetectBtn.clicked.connect(self.DectectClick)
+        self.objDetectBtn.setContentsMargins(30,0,30,0)
+
         self.origImg = QPixmap()
         self.lblImg = QLabel()
         self.lblImg.setPixmap(self.origImg)
         self.lblImg.setScaledContents(True)
 
-        hLay.addWidget(self.filesListWidget)
-        hLay.addWidget(self.lblImg)
+        vLay.addWidget(self.filesListWidget)
+        vLay.addWidget(self.objDetectBtn)
+        hLay.addLayout(vLay)
+        hLay.addStretch(1)
+        hLay.addWidget(self.lblImg,2)
+        hLay.addStretch(1)
 
         self.filesListWidget.changeSignal.connect(self.ChangeOrigImg)
+
+    def resizeEvent(self,event):
+        if(self.currentFile != ""):
+            self.ChangeOrigImg(self.currentFile)
+            
+
 
     @QtCore.pyqtSlot(str)
     def ChangeOrigImg(self, filename):
         self.origImg.load(filename)
+        self.currentFile = filename
+        maxPicSize = min([self.width() - 300,self.height() - 100])
         maxLen = max([self.origImg.size().width(), self.origImg.size().height()])
-        koef = maxLen/self.maxPicSize
+        koef = maxLen/maxPicSize
         self.origImg.scaled(math.floor(self.origImg.size().width()/koef), math.floor(self.origImg.size().height()/koef), Qt.KeepAspectRatio)
         self.lblImg.setFixedSize(math.floor(self.origImg.size().width()/koef), math.floor(self.origImg.size().height()/koef))
         self.lblImg.setPixmap(self.origImg)
+
+    def DectectClick(self):
+        #D:\lab\5sem\praktika2\yolov5\data\picsAll\images
+        if self.currentFile!="":
+            self.detect.GetDetectPic(self.currentFile)
+            self.origImg.load('Detectpic.png')
+            maxPicSize = min([self.width() - 300,self.height() - 100])
+            maxLen = max([self.origImg.size().width(), self.origImg.size().height()])
+            koef = maxLen/maxPicSize
+            self.origImg.scaled(math.floor(self.origImg.size().width()/koef), math.floor(self.origImg.size().height()/koef), Qt.KeepAspectRatio)
+            self.lblImg.setFixedSize(math.floor(self.origImg.size().width()/koef), math.floor(self.origImg.size().height()/koef))
+            self.lblImg.setPixmap(self.origImg)
+
 
 
 app = QApplication(sys.argv)
