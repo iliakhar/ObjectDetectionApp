@@ -1,4 +1,3 @@
-from types import NoneType
 from PyQt5.QtCore import *
 from PyQt5.QtGui import (QFont)
 from PyQt5.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,QLabel, QListWidget, QFileDialog)
@@ -9,12 +8,13 @@ import glob
 class DirListBox(QWidget):
     changeSignal = QtCore.pyqtSignal(str)
     def __init__ (self, title):
+        self.curPath = ''
+        self.curFile = ''
         super().__init__()
         self.initUI(title)
 
     def initUI(self, title):
 
-        
         vLay = QVBoxLayout()
         hLay = QHBoxLayout()
         self.dirList = QListWidget()
@@ -37,8 +37,15 @@ class DirListBox(QWidget):
         self.openFileBtn.setMinimumHeight(30)
         self.openFileBtn.clicked.connect(self.SelectFile)
 
+        self.pathTitle = QLabel(' Path: ')
+        self.pathTitle.setFont(fontBig)
+
+        self.pathLine = QListWidget()
+        self.pathLine.setFixedHeight(40)
+        self.pathLine.setFont(fontBig)
+
         self.setMinimumWidth(250)
-        #self.setMaximumWidth(250)
+        self.setMaximumWidth(250)
 
         hLay.addWidget(self.openDirBtn)
         
@@ -49,6 +56,8 @@ class DirListBox(QWidget):
 
         vLay.addWidget(self.titleLbl)
         vLay.addWidget(self.dirList)
+        vLay.addWidget(self.pathTitle)
+        vLay.addWidget(self.pathLine)
         vLay.addLayout(hLay)
 
         self.setLayout(vLay)
@@ -56,7 +65,8 @@ class DirListBox(QWidget):
     @QtCore.pyqtSlot()
     def ChangeElem(self):
         if self.dirList.currentItem() != None:
-            self.changeSignal.emit(self.dirList.currentItem().text())
+            self.curFile = self.curPath + '\\' + self.dirList.currentItem().text()
+            self.changeSignal.emit(self.curFile)
 
     def SelectFile(self):
         filenames, _ = QFileDialog.getOpenFileNames(
@@ -67,16 +77,20 @@ class DirListBox(QWidget):
             )
         if filenames:
             self.dirList.clear()
-            self.dirList.addItems([str(Path(filename)) for filename in filenames])
+            self.curPath = str(Path(filenames[0]))[:str(Path(filenames[0])).rfind('\\')]
+            self.pathLine.clear()
+            self.pathLine.addItem(str(self.curPath))
+            self.dirList.addItems([str(Path(filename))[str(Path(filename)).rfind('\\')+1:] for filename in filenames])
         
     def SelectFolder(self):
         types = ('*.png', '*.jpg', '*.jpeg')
         dir_name = QFileDialog.getExistingDirectory(self, "Select a Directory","C:\\")
         if dir_name:
             self.dirList.clear()
-            path = Path(dir_name)
-            lst = []
+            self.curPath = str(Path(dir_name))
+            self.pathLine.clear()
+            self.pathLine.addItem(str(self.curPath))
             for tp in types:
-                filenames = glob.glob(str(path) + "\\" + tp)
+                filenames = glob.glob(str(self.curPath) + "\\" + tp)
                 if filenames:
-                    self.dirList.addItems([str(Path(filename)) for filename in filenames])
+                    self.dirList.addItems([str(Path(filename))[str(Path(filename)).rfind('\\')+1:] for filename in filenames])

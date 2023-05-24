@@ -1,5 +1,4 @@
 from email.charset import QP
-import imp
 import math
 from re import A
 from PyQt5.QtCore import *
@@ -76,8 +75,12 @@ class MainWindow(QWidget):
         self.infoLine.setFont(fontBig)
         self.infoLine.setReadOnly(True)
 
+
         self.infoTitle = QLabel(' Info: ')
         self.infoTitle.setFont(fontBig)
+
+        self.pathTitle = QLabel(' Path: ')
+        self.pathTitle.setFont(fontBig)
 
         self.origImg = QPixmap()
         self.lblImg = QLabel()
