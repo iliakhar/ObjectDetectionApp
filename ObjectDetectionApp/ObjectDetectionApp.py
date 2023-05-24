@@ -64,8 +64,7 @@ class MainWindow(QWidget):
 
         fontBig = QFont('Arial', 12)
         self.objDetectBtn = QPushButton("Detect")
-        self.objDetectBtn.setMaximumWidth(255)
-        self.objDetectBtn.setMinimumWidth(255)
+        self.objDetectBtn.setFixedWidth(236)
         self.objDetectBtn.setFont(fontBig)
         self.objDetectBtn.setMinimumHeight(35)
         self.objDetectBtn.clicked.connect(self.DectectClick)
@@ -105,18 +104,16 @@ class MainWindow(QWidget):
 
     def resizeEvent(self,event):
         if(self.currentFile != ""):
-            if(self.isDetected):
-                self.ChangeOrigImg('Detectpic.png')
-            else:
-                self.ChangeOrigImg(self.currentFile)
-                self.infoLine.setText('')
+            self.ShowImg()
 
 
     @QtCore.pyqtSlot(str)
     def ChangeOrigImg(self, filename):
         self.isDetected = False
+        self.infoLine.setText('')
         self.currentFile = filename
-        self.ShowImg(filename)
+        self.origImg.load(filename)
+        self.ShowImg()
         
 
     def DectectClick(self):
@@ -125,13 +122,10 @@ class MainWindow(QWidget):
             self.isDetected = True
             info = self.detect.GetDetectPic(self.currentFile)
             self.infoLine.setText(' ' + info)
-            self.ShowImg('Detectpic.png')
+            self.origImg.load('Detectpic.png')
+            self.ShowImg()
 
-    def ShowImg(self, filename):
-        self.origImg.load(filename)
-        '''maxPicSize = min([self.origImg.size().width() - 15,self.frame.height() - 15])
-        maxLen = max([self.origImg.size().width(), self.origImg.size().height()])
-        koef = maxLen/maxPicSize'''
+    def ShowImg(self):
         koefW = self.origImg.size().width() / (self.frame.width()-15)
         koefH = self.origImg.size().height() / (self.frame.height()-15)
         koef = max([koefW, koefH])
